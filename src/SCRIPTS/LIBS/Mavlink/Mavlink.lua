@@ -30,6 +30,7 @@ else
     local skipFrame = false
     local debugMode = false
     local logFile
+    local err2
     Mavlink =  {}
     Mavlink.vehicle = {}
     Mavlink.vehicle.dropCount = 0
@@ -139,12 +140,21 @@ else
     function Mavlink.setDebugMode(enable)
         debugMode = enable
         if enable then 
-            logFile , err = io.open("/LOGS/Mavlink/log.mavlink","r")
+            logFile , err = io.open("/LOGS/Mavlink/log.mavlink","rb")
             if not logFile then
-                Logger.pushMsg("DBM: ", 3)
+                logFile , err2 = io.open("/LOGS/Mavlink/pubLog.mavlink","rb")
             end
+            if err then
+                Logger.pushMsg("DBM: "..err, 3)
+            end
+            if err2 then
+                Logger.pushMsg("DBMP: "..err2, 3)
+            end
+            if not logFile then
+                debugMode = false
+                end
         elseif logFile then
-            logFile:close()
+            io.close(logFile)
         end
     end
     function Mavlink.update()
@@ -153,21 +163,19 @@ else
             return
         end
         lastRunTime = now
-        for i = 1,(debugMode and 2 or 10) do
+        for i = 1,(debugMode and 20 or 50) do
             local command, packet
             if debugMode then
                 command = 0xff
-                local l = string.byte(logFile:read(1))
+                local l = string.byte(io.read(logFile,1))
                 if not l then
-                    _, err = logFile.seek("set")
-                    if err then
-                        Logger.pushMsg(err,1)
-                        break
-                    else
-                        l = string.byte(logFile:read(1))
-                    end
+                    io.seek(logFile,0)
+                    l = string.byte(io.read(logFile,1))
+                    Mavlink.vehicle.dropCount = 0
+                    Mavlink.vehicle.packetCount = 0
                 end
-                local data, err = logFile:read(l)
+                print("DBF")
+                local data, err = io.read(logFile,l)
                 if not data then
                     Logger.pushMsg(err,1)
                     break

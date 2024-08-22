@@ -16,6 +16,8 @@ local function create(zone, options)
         fnc()
         fnc = nil
     end
+    Mavlink.setDebugMode(options.debugMode == 1)
+
     widget.zone=zone
     widget.options=options
   return widget
