@@ -4,6 +4,7 @@ local name = "MavL Stat"
 -- Options can be changed by the user from the Widget Settings menu
 -- Notice that each line is a table inside { }
 local options = {
+    { "debugMode", BOOL, 0 },
 }
 
 
@@ -23,6 +24,7 @@ end
 local function update(widget, options)
   -- Runs if options are changed from the Widget Settings menu
   widget.options = options
+  Mavlink.setDebugMode(options.debugMode == 1)
 end
 
 local function background(widget)

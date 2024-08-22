@@ -28,7 +28,8 @@ else
     local parseCount = 0
     local tgtSysId = 1
     local skipFrame = false
-    
+    local debugMode = false
+    local logFile
     Mavlink =  {}
     Mavlink.vehicle = {}
     Mavlink.vehicle.dropCount = 0
@@ -135,16 +136,48 @@ else
             end
         end
     end -- processRcvMsg
+    function Mavlink.setDebugMode(enable)
+        debugMode = enable
+        if enable then 
+            logFile , err = io.open("/LOGS/Mavlink/log.mavlink","r")
+            if not logFile then
+                Logger.pushMsg("DBM: ", 3)
+            end
+        elseif logFile then
+            logFile:close()
+        end
+    end
     function Mavlink.update()
         local now = getTime()
         if now - lastRunTime < timeStep then
             return
         end
         lastRunTime = now
-        for i = 1,10 do
-            local command, packet = crossfireTelemetryPop()
+        for i = 1,(debugMode and 2 or 10) do
+            local command, packet
+            if debugMode then
+                command = 0xff
+                local l = string.byte(logFile:read(1))
+                if not l then
+                    _, err = logFile.seek("set")
+                    if err then
+                        Logger.pushMsg(err,1)
+                        break
+                    else
+                        l = string.byte(logFile:read(1))
+                    end
+                end
+                local data, err = logFile:read(l)
+                if not data then
+                    Logger.pushMsg(err,1)
+                    break
+                end
+                packet = {l,string.byte(data,1,string.len(data))}
+            else
+                command, packet = crossfireTelemetryPop()
+            end
             if command == 0xff and packet then -- 0xff is MAVLINK Tunnel
-                local len = packet[1]
+                local len = packet[1] or 0
                 for it = 2,math.min(len+1,#packet) do
                     local byte = packet[it]
                     if parseState == 1 then -- waiting for STX
